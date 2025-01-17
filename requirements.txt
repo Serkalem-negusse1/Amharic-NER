@@ -1,0 +1,13 @@
+requests
+beautifulsoup4
+pandas
+numpy
+tensorflow
+torch
+transformers
+regex
+emoji
+nltk
+scikit-learn
+telethon
+matplotlib
