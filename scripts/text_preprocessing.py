@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import pandas as pd
-from keras.preprocessing.image import load_img, img_to_array, save_img
 from tensorflow.keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from scipy import stats
@@ -34,7 +33,7 @@ for column in numerical_columns:
 # Extract the 'Message' column as a list
 text_data = df['Message'].tolist()
 
-# Tokenization and padding
+# Tokenization
 max_words = 10000
 max_sequence_length = 100
 embedding_dim = 50
@@ -42,11 +41,20 @@ embedding_dim = 50
 tokenizer = Tokenizer(num_words=max_words)
 tokenizer.fit_on_texts(text_data)
 text_sequences = tokenizer.texts_to_sequences(text_data)
-text_padded = pad_sequences(text_sequences, maxlen=max_sequence_length, padding='post')
+
+# Pad the sequences to ensure they are of the same length
+text_sequences = pad_sequences(text_sequences, maxlen=max_sequence_length, padding='post')
+
+# Display the shape of the padded sequences
+print(f"Shape of the processed text sequences: {text_sequences.shape}")
+
+# Calculate and print the vocabulary size
+vocab_size = len(tokenizer.word_index) + 1
+print(f"Vocabulary size: {vocab_size}")
 
 # Save the processed text data to a new CSV file
 processed_text_data_path = 'processed_text_data.csv'
-processed_df = pd.DataFrame(text_padded)
+processed_df = pd.DataFrame(text_sequences)
 processed_df.to_csv(processed_text_data_path, index=False)
 
 print(f"Processed text data saved to {processed_text_data_path}")
