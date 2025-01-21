@@ -1,62 +1,55 @@
-from telethon import TelegramClient
-import csv
 import os
-from dotenv import load_dotenv
+from keras.preprocessing.image import load_img, img_to_array, save_img
+import numpy as np
 
-# Load environment variables from the .env file
-load_dotenv(r'e:\Amharic-NER\scripts\.env')  # Make sure the path points to where the .env file is located
-
-# Retrieve the API credentials from environment variables
-api_id = os.getenv('API_ID')
-api_hash = os.getenv('API_HASH')
-phone = os.getenv('PHONE_NUMBER')
-
-# Debugging: Ensure the values are loaded properly
-print(f"API_ID: {api_id}")
-print(f"API_HASH: {api_hash}")
-print(f"PHONE_NUMBER: {phone}")
-
-# Function to scrape data from a single channel
-async def scrape_channel(client, channel_username, writer, media_dir):
-    entity = await client.get_entity(channel_username)
-    channel_title = entity.title  # Extract the channel's title
-    async for message in client.iter_messages(entity, limit=10000):
-        media_path = None
-        if message.media and hasattr(message.media, 'photo'):
-            # Create a unique filename for the photo
-            filename = f"{channel_username}_{message.id}.jpg"
-            media_path = os.path.join(media_dir, filename)
-            # Download the media to the specified directory if it's a photo
-            await client.download_media(message.media, media_path)
-        
-        # Write the channel title along with other data
-        writer.writerow([channel_title, channel_username, message.id, message.message, message.date, media_path])
-
-# Initialize the client once
-client = TelegramClient('scraping_session', api_id, api_hash)
-
-async def main():
-    await client.start()
+# Define image preprocessing function
+def preprocess_image(image_path, target_size=(224, 224)):
+    """
+    Preprocesses an image by:
+    - Resizing the image
+    - Normalizing pixel values (0-1 range)
+    """
+    # Load image
+    image = load_img(image_path, target_size=target_size)
     
-    # Create a directory for media files
-    media_dir = 'photos'
-    os.makedirs(media_dir, exist_ok=True)
+    # Convert image to array
+    image_array = img_to_array(image)
+    
+    # Normalize pixel values to [0, 1]
+    image_array = image_array / 255.0
+    
+    return image_array
 
-    # Open the CSV file and prepare the writer
-    with open('telegram_data.csv', 'w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(['Channel Title', 'Channel Username', 'ID', 'Message', 'Date', 'Media Path'])  # Include channel title in the header
-        
-        # List of channels to scrape
-        channels = [
-            '@aradabrand2',  # Updated channel
-            # You can add more channels here
-        ]
-        
-        # Iterate over channels and scrape data into the single CSV file
-        for channel in channels:
-            await scrape_channel(client, channel, writer, media_dir)
-            print(f"Scraped data from {channel}")
+# Example: Load and preprocess image data
+image_dir = '/photos'  # Replace with actual image directory path
+output_dir = '/processed_images'  # Directory where preprocessed images will be saved
 
-with client:
-    client.loop.run_until_complete(main())
+# Check if the image directory exists
+if not os.path.exists(image_dir):
+    print(f"Error: The directory {image_dir} does not exist.")
+    exit()
+
+# Create output directory if it doesn't exist
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# Get list of image files (JPEG, PNG)
+image_files = [os.path.join(image_dir, filename) for filename in os.listdir(image_dir) if filename.endswith(('.jpg', '.png'))]
+
+# Ensure there are image files to process
+if len(image_files) == 0:
+    print("Error: No image files found in the directory.")
+    exit()
+
+# Preprocess and save images
+for i, img_path in enumerate(image_files):
+    processed_image = preprocess_image(img_path)
+    
+    # Generate the output image path
+    output_image_path = os.path.join(output_dir, f"processed_image_{i+1}.png")
+    
+    # Save the preprocessed image to the output directory
+    save_img(output_image_path, processed_image)
+    print(f"Saved preprocessed image: {output_image_path}")
+
+print(f"All images processed and saved to {output_dir}")
